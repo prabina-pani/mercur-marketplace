@@ -50,6 +50,9 @@ module.exports = defineConfig({
   ],
   modules: [
     {
+      resolve: './src/modules/promotion-extended',
+    },
+    {
       resolve: '@medusajs/medusa/payment',
       options: {
         providers: [
