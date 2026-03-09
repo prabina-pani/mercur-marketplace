@@ -8,13 +8,15 @@ updatePromotionsWorkflow.hooks.promotionsUpdated(
   async ({ promotions, additional_data }, { container }) => {
     const workflow = updatePromotionExtendedFromPromotionWorkflow(container)
 
-    for (const promotion of promotions) {
-      await workflow.run({
-        input: {
-          promotion,
-          additional_data,
-        } as UpdatePromotionExtendedFromPromotionInput,
-      })
-    }
+    await Promise.all(
+      promotions.map((promotion) =>
+        workflow.run({
+          input: {
+            promotion,
+            additional_data,
+          } as UpdatePromotionExtendedFromPromotionInput,
+        })
+      )
+    )
   }
 )

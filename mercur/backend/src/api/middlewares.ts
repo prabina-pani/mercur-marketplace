@@ -1,5 +1,23 @@
-import { defineMiddlewares } from "@medusajs/framework/http"
+import {
+  defineMiddlewares,
+  MedusaNextFunction,
+  MedusaRequest,
+  MedusaResponse,
+} from "@medusajs/framework/http"
 import { z } from "zod"
+import { PROMOTION_EXTENDED_ALLOWED_FIELDS } from "../modules/promotion-extended/constants"
+
+function allowPromotionExtendedFields(
+  req: MedusaRequest,
+  _res: MedusaResponse,
+  next: MedusaNextFunction
+) {
+  req.allowed = [
+    ...(req.allowed ?? []),
+    ...PROMOTION_EXTENDED_ALLOWED_FIELDS,
+  ]
+  next()
+}
 
 export default defineMiddlewares({
   routes: [
@@ -24,32 +42,12 @@ export default defineMiddlewares({
     {
       method: "GET",
       matcher: "/admin/promotions",
-      middlewares: [
-        (req, _res, next) => {
-          req.allowed = [
-            ...(req.allowed ?? []),
-            "promotionExtended",
-            "promotionExtended.*",
-            "*promotionExtended",
-          ]
-          next()
-        },
-      ],
+      middlewares: [allowPromotionExtendedFields],
     },
     {
       method: "GET",
       matcher: "/admin/promotions/:id",
-      middlewares: [
-        (req, _res, next) => {
-          req.allowed = [
-            ...(req.allowed ?? []),
-            "promotionExtended",
-            "promotionExtended.*",
-            "*promotionExtended",
-          ]
-          next()
-        },
-      ],
+      middlewares: [allowPromotionExtendedFields],
     },
   ],
 })

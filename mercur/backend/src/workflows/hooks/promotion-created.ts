@@ -8,13 +8,15 @@ createPromotionsWorkflow.hooks.promotionsCreated(
   async ({ promotions, additional_data }, { container }) => {
     const workflow = createPromotionExtendedFromPromotionWorkflow(container)
 
-    for (const promotion of promotions) {
-      await workflow.run({
-        input: {
-          promotion,
-          additional_data,
-        } as CreatePromotionExtendedFromPromotionInput,
-      })
-    }
+    await Promise.all(
+      promotions.map((promotion) =>
+        workflow.run({
+          input: {
+            promotion,
+            additional_data,
+          } as CreatePromotionExtendedFromPromotionInput,
+        })
+      )
+    )
   }
 )
