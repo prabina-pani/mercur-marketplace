@@ -50,6 +50,9 @@ module.exports = defineConfig({
   ],
   modules: [
     {
+      resolve: './src/modules/seller_registration'
+    },
+    {
       resolve: '@medusajs/medusa/payment',
       options: {
         providers: [
