@@ -1,5 +1,6 @@
 import { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
 import { MedusaError } from "@medusajs/framework/utils"
+import { createSellerCreationRequestWorkflow } from "@mercurjs/requests/workflows"
 import {
   SELLER_REGISTRATION_MODULE,
   type SellerRegistrationModuleService,
@@ -9,6 +10,7 @@ import {
   PAYLOAD_KEYS,
   REGISTRATION_STATUS,
 } from "../../modules/seller_registration/constants"
+import { getSellerRegistrationAbsoluteUploadRoot } from "../../modules/seller_registration/upload-root"
 import { promises as fs } from "fs"
 import path from "path"
 import { randomUUID } from "crypto"
@@ -211,13 +213,7 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
     }
   }
 
-  // Get upload root from env or use default
-  const uploadRoot =
-    process.env.SELLER_REGISTRATION_UPLOAD_ROOT ||
-    "uploads/seller-registrations"
-  const absoluteUploadRoot = path.isAbsolute(uploadRoot)
-    ? uploadRoot
-    : path.join(process.cwd(), uploadRoot)
+  const absoluteUploadRoot = getSellerRegistrationAbsoluteUploadRoot()
 
   const requestId = randomUUID()
   const requestUploadDir = path.join(absoluteUploadRoot, requestId)
@@ -247,7 +243,7 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
     // Step 2: Create document metadata rows
     await sellerRegistrationService.createSellerRegistrationDocuments([
       {
-        registration_request: requestId,
+        registration_request_id: requestId,
         document_type: DOCUMENT_TYPE.VAT_REGISTRATION_CERTIFICATE,
         original_filename: vatCertFile!.originalname,
         mime_type: vatCertFile!.mimetype,
@@ -255,7 +251,7 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
         storage_key: path.join(requestId, vatCertFilename),
       },
       {
-        registration_request: requestId,
+        registration_request_id: requestId,
         document_type: DOCUMENT_TYPE.UPDATED_COMPANY_AFFIDAVIT,
         original_filename: affidavitFile!.originalname,
         mime_type: affidavitFile!.mimetype,
@@ -272,6 +268,33 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
       fs.writeFile(vatCertPath, vatCertFile!.buffer),
       fs.writeFile(affidavitPath, affidavitFile!.buffer),
     ])
+
+    const memberDisplayName = [
+      payload.first_name,
+      payload.middle_name,
+      payload.last_name,
+    ]
+      .filter((p) => p && String(p).trim())
+      .map((p) => String(p).trim())
+      .join(" ")
+
+    await createSellerCreationRequestWorkflow.run({
+      container: req.scope,
+      input: {
+        type: "seller",
+        data: {
+          seller: { name: String(payload.company_legal_name ?? "").trim() },
+          member: {
+            name: memberDisplayName,
+            email: String(payload.email ?? "").trim(),
+          },
+          provider_identity_id: String(payload.email ?? "").trim(),
+          seller_registration_id: requestId,
+          seller_registration_payload: payload,
+        },
+        submitter_id: `seller_registration:${requestId}`,
+      },
+    })
 
     return res.status(201).json({
       id: registrationRequest.id,

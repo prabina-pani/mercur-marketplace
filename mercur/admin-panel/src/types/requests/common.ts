@@ -83,5 +83,8 @@ export interface AdminSellerRequest extends RequestDTO {
     member: MemberDTO;
     seller: SellerDTO;
     provider_identity_id?: string;
+    /** Set when request was created from approved self-service seller_registration */
+    seller_registration_id?: string;
+    seller_registration_payload?: Record<string, unknown>;
   };
 }
